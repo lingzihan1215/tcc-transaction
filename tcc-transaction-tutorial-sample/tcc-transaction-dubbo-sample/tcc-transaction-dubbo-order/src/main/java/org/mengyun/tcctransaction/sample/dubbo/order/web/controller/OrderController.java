@@ -95,7 +95,6 @@ public class OrderController {
 
     @RequestMapping(value = "/payresult/{merchantOrderNo}", method = RequestMethod.GET)
     public ModelAndView getPayResult(@PathVariable String merchantOrderNo) {
-
         ModelAndView mv = new ModelAndView("pay_success");
 
         String payResultTip = null;
@@ -109,7 +108,6 @@ public class OrderController {
             payResultTip = "Unknown";
 
         mv.addObject("payResult", payResultTip);
-
         mv.addObject("capitalAmount", accountService.getCapitalAccountByUserId(foundOrder.getPayerUserId()));
         mv.addObject("redPacketAmount", accountService.getRedPacketAccountByUserId(foundOrder.getPayerUserId()));
 

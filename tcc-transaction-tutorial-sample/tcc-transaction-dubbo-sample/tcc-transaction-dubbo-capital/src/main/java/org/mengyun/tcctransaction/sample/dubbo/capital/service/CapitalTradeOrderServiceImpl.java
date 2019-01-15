@@ -32,7 +32,6 @@ public class CapitalTradeOrderServiceImpl implements CapitalTradeOrderService {
     @Compensable(confirmMethod = "confirmRecord", cancelMethod = "cancelRecord", transactionContextEditor = DubboTransactionContextEditor.class)
     @Transactional
     public String record(CapitalTradeOrderDto tradeOrderDto) {
-
         try {
             Thread.sleep(1000l);
         } catch (InterruptedException e) {
@@ -41,13 +40,11 @@ public class CapitalTradeOrderServiceImpl implements CapitalTradeOrderService {
 
         System.out.println("capital try record called. time seq:" + DateFormatUtils.format(Calendar.getInstance(), "yyyy-MM-dd HH:mm:ss"));
 
-
+        //插入订单
+        //先查询是否已经有订单
         TradeOrder foundTradeOrder = tradeOrderRepository.findByMerchantOrderNo(tradeOrderDto.getMerchantOrderNo());
-
-
         //check if trade order has been recorded, if yes, return success directly.
         if (foundTradeOrder == null) {
-
             TradeOrder tradeOrder = new TradeOrder(
                     tradeOrderDto.getSelfUserId(),
                     tradeOrderDto.getOppositeUserId(),
@@ -58,12 +55,10 @@ public class CapitalTradeOrderServiceImpl implements CapitalTradeOrderService {
             try {
                 tradeOrderRepository.insert(tradeOrder);
 
+                //更新买家账户
                 CapitalAccount transferFromAccount = capitalAccountRepository.findByUserId(tradeOrderDto.getSelfUserId());
-
                 transferFromAccount.transferFrom(tradeOrderDto.getAmount());
-
                 capitalAccountRepository.save(transferFromAccount);
-
             } catch (DataIntegrityViolationException e) {
                 //this exception may happen when insert trade order concurrently, if happened, ignore this insert operation.
             }
@@ -83,15 +78,15 @@ public class CapitalTradeOrderServiceImpl implements CapitalTradeOrderService {
 
         TradeOrder tradeOrder = tradeOrderRepository.findByMerchantOrderNo(tradeOrderDto.getMerchantOrderNo());
 
-        //check if the trade order status is DRAFT, if yes, return directly, ensure idempotency.
+        //check if the trade order status is DRAFT, if yes, go on
+        //更新订单状态为confirm
         if (tradeOrder != null && tradeOrder.getStatus().equals("DRAFT")) {
             tradeOrder.confirm();
             tradeOrderRepository.update(tradeOrder);
 
+            //更新卖家账户
             CapitalAccount transferToAccount = capitalAccountRepository.findByUserId(tradeOrderDto.getOppositeUserId());
-
             transferToAccount.transferTo(tradeOrderDto.getAmount());
-
             capitalAccountRepository.save(transferToAccount);
         }
     }
@@ -109,14 +104,14 @@ public class CapitalTradeOrderServiceImpl implements CapitalTradeOrderService {
         TradeOrder tradeOrder = tradeOrderRepository.findByMerchantOrderNo(tradeOrderDto.getMerchantOrderNo());
 
         //check if the trade order status is DRAFT, if yes, return directly, ensure idempotency.
+        //更新订单状态为cancel
         if (null != tradeOrder && "DRAFT".equals(tradeOrder.getStatus())) {
             tradeOrder.cancel();
             tradeOrderRepository.update(tradeOrder);
 
+            //更新回退买家账户
             CapitalAccount capitalAccount = capitalAccountRepository.findByUserId(tradeOrderDto.getSelfUserId());
-
             capitalAccount.cancelTransfer(tradeOrderDto.getAmount());
-
             capitalAccountRepository.save(capitalAccount);
         }
     }

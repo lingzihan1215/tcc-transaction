@@ -36,9 +36,7 @@ public class PlaceOrderServiceImpl {
         Boolean result = false;
 
         try {
-
             paymentService.makePayment(order, redPacketPayAmount, order.getTotalAmount().subtract(redPacketPayAmount));
-
         } catch (ConfirmingException confirmingException) {
             //exception throws with the tcc transaction status is CONFIRMING,
             //when tcc transaction is confirming status,

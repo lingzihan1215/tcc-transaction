@@ -37,7 +37,6 @@ public class CapitalAccount {
     }
 
     public void transferFrom(BigDecimal amount) {
-
         this.balanceAmount = this.balanceAmount.subtract(amount);
 
         if (BigDecimal.ZERO.compareTo(this.balanceAmount) > 0) {

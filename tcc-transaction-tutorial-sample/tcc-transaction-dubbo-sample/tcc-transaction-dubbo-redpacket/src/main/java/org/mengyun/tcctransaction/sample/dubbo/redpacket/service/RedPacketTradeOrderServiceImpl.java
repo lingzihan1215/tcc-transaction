@@ -32,7 +32,6 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
     @Compensable(confirmMethod = "confirmRecord", cancelMethod = "cancelRecord", transactionContextEditor = DubboTransactionContextEditor.class)
     @Transactional
     public String record(RedPacketTradeOrderDto tradeOrderDto) {
-
         try {
             Thread.sleep(1000l);
         } catch (InterruptedException e) {
@@ -44,8 +43,9 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
         TradeOrder foundTradeOrder = tradeOrderRepository.findByMerchantOrderNo(tradeOrderDto.getMerchantOrderNo());
 
         //check if trade order has been recorded, if yes, return success directly.
+        //插入订单
+        //先查询是否已经有订单
         if (foundTradeOrder == null) {
-
             TradeOrder tradeOrder = new TradeOrder(
                     tradeOrderDto.getSelfUserId(),
                     tradeOrderDto.getOppositeUserId(),
@@ -54,13 +54,11 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
             );
 
             try {
-
                 tradeOrderRepository.insert(tradeOrder);
 
+                //更新买家账户
                 RedPacketAccount transferFromAccount = redPacketAccountRepository.findByUserId(tradeOrderDto.getSelfUserId());
-
                 transferFromAccount.transferFrom(tradeOrderDto.getAmount());
-
                 redPacketAccountRepository.save(transferFromAccount);
             } catch (DataIntegrityViolationException e) {
                 //this exception may happen when insert trade order concurrently, if happened, ignore this insert operation.
@@ -72,33 +70,32 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
 
     @Transactional
     public void confirmRecord(RedPacketTradeOrderDto tradeOrderDto) {
-
         try {
             Thread.sleep(1000l);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
 
+
         System.out.println("red packet confirm record called. time seq:" + DateFormatUtils.format(Calendar.getInstance(), "yyyy-MM-dd HH:mm:ss"));
 
         TradeOrder tradeOrder = tradeOrderRepository.findByMerchantOrderNo(tradeOrderDto.getMerchantOrderNo());
 
-        //check if the trade order status is DRAFT, if yes, return directly, ensure idempotency.
+        //check if the trade order status is DRAFT, if yes, go on
+        //更新订单状态为confirm
         if (tradeOrder != null && tradeOrder.getStatus().equals("DRAFT")) {
             tradeOrder.confirm();
             tradeOrderRepository.update(tradeOrder);
 
+            //更新卖家账户
             RedPacketAccount transferToAccount = redPacketAccountRepository.findByUserId(tradeOrderDto.getOppositeUserId());
-
             transferToAccount.transferTo(tradeOrderDto.getAmount());
-
             redPacketAccountRepository.save(transferToAccount);
         }
     }
 
     @Transactional
     public void cancelRecord(RedPacketTradeOrderDto tradeOrderDto) {
-
         try {
             Thread.sleep(1000l);
         } catch (InterruptedException e) {
@@ -110,14 +107,14 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
         TradeOrder tradeOrder = tradeOrderRepository.findByMerchantOrderNo(tradeOrderDto.getMerchantOrderNo());
 
         //check if the trade order status is DRAFT, if yes, return directly, ensure idempotency.
+        //更新订单状态为cancel
         if (null != tradeOrder && "DRAFT".equals(tradeOrder.getStatus())) {
             tradeOrder.cancel();
             tradeOrderRepository.update(tradeOrder);
 
+            //更新回退买家账户
             RedPacketAccount capitalAccount = redPacketAccountRepository.findByUserId(tradeOrderDto.getSelfUserId());
-
             capitalAccount.cancelTransfer(tradeOrderDto.getAmount());
-
             redPacketAccountRepository.save(capitalAccount);
         }
     }
