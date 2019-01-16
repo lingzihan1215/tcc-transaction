@@ -7,20 +7,15 @@
 
     <context:component-scan base-package="org.mengyun.tcctransaction.sample.dubbo"/>
 
+    <!-- 事务恢复 -->
     <bean class="org.mengyun.tcctransaction.spring.recover.DefaultRecoverConfig">
         <property name="maxRetryCount" value="30"/>
         <property name="recoverDuration" value="60"/>
-        <property name="cronExpression" value="0/30 * * * * ?"/>
+        <property name="cronExpression" value="0/5 * * * * ?"/>
     </bean>
 
 
-    <bean id="transactionRepository"
-          class="org.mengyun.tcctransaction.spring.repository.SpringJdbcTransactionRepository">
-        <property name="dataSource" ref="tccDataSource"/>
-        <property name="domain" value="REDPACKET"/>
-        <property name="tbSuffix" value="_RED"/>
-    </bean>
-
+    <!-- 持久化事务日志 mysql-->
     <util:properties id="tccjdbc" location="classpath:tccjdbc.properties"/>
 
     <bean id="tccDataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
@@ -37,7 +32,15 @@
         <property name="checkoutTimeout" value="#{tccjdbc['c3p0.checkoutTimeout']}"/>
     </bean>
 
+    <bean id="transactionRepository"
+          class="org.mengyun.tcctransaction.spring.repository.SpringJdbcTransactionRepository">
+        <property name="dataSource" ref="tccDataSource"/>
+        <property name="domain" value="REDPACKET"/>
+        <property name="tbSuffix" value="_RED"/>
+    </bean>
 
+
+    <!-- 持久化事务日志 redis-->
     <!--<bean id="transactionRepository" class="org.mengyun.tcctransaction.repository.RedisTransactionRepository">-->
     <!--<property name="keyPrefix" value="TCC:RED:"/>-->
     <!--<property name="jedisPool" ref="jedisPool"/>-->

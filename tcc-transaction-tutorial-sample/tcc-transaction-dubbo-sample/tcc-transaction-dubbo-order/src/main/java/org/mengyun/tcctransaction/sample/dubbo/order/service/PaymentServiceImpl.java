@@ -46,14 +46,15 @@ public class PaymentServiceImpl {
 
         String result = capitalTradeOrderService.record(buildCapitalTradeOrderDto(order));
         String result2 = redPacketTradeOrderService.record(buildRedPacketTradeOrderDto(order));
+//        int i = 10/0;
     }
 
     public void confirmMakePayment(Order order, BigDecimal redPacketPayAmount, BigDecimal capitalPayAmount) {
-        try {
-            Thread.sleep(1000l);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            Thread.sleep(1000l);
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        }
 
         System.out.println("order confirm make payment called. time seq:" + DateFormatUtils.format(Calendar.getInstance(), "yyyy-MM-dd HH:mm:ss"));
 
@@ -64,14 +65,15 @@ public class PaymentServiceImpl {
             order.confirm();
             orderRepository.updateOrder(order);
         }
+//        int i = 10/0;
     }
 
     public void cancelMakePayment(Order order, BigDecimal redPacketPayAmount, BigDecimal capitalPayAmount) {
-        try {
-            Thread.sleep(1000l);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            Thread.sleep(1000l);
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        }
 
         System.out.println("order cancel make payment called.time seq:" + DateFormatUtils.format(Calendar.getInstance(), "yyyy-MM-dd HH:mm:ss"));
 
@@ -82,6 +84,7 @@ public class PaymentServiceImpl {
             order.cancelPayment();
             orderRepository.updateOrder(order);
         }
+//        int i = 10/0;
     }
 
 
