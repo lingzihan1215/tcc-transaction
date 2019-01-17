@@ -10,6 +10,7 @@ import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 
 /**
+ * 事务管理器，提供事务的获取、发起、提交、回滚，参与者的新增等等方法。
  * Created by changmingxie on 10/26/15.
  */
 public class TransactionManager {
@@ -18,6 +19,11 @@ public class TransactionManager {
 
     private TransactionRepository transactionRepository;
 
+    /**
+     * 当前线程事务队列
+     * TCC-Transaction 支持多个的事务独立存在，后创建的事务先提交，类似 Spring 的org.springframework.transaction.annotation.Propagation.REQUIRES_NEW 。
+     * TCC-Transaction 自己的 org.mengyun.tcctransaction.api.Propagation
+     */
     private static final ThreadLocal<Deque<Transaction>> CURRENT = new ThreadLocal<Deque<Transaction>>();
 
     private ExecutorService executorService;
@@ -33,28 +39,53 @@ public class TransactionManager {
     public TransactionManager() {
     }
 
+    /**
+     * 发起根事务
+     * 此方法在调用方法类型为 MethodType.ROOT 并且 事务处于 Try 阶段被调用
+     *
+     * @return 事务
+     */
     public Transaction begin() {
-
         Transaction transaction = new Transaction(TransactionType.ROOT);
+        //存储事务
         transactionRepository.create(transaction);
+        //注册事务到当前线程事务队列
         registerTransaction(transaction);
         return transaction;
     }
 
+    /**
+     * 传播发起分支事务
+     *
+     * @param transactionContext 事务上下文
+     * @return 分支事务
+     */
     public Transaction propagationNewBegin(TransactionContext transactionContext) {
-
+        // 创建 分支事务
         Transaction transaction = new Transaction(transactionContext);
+        // 存储 事务
         transactionRepository.create(transaction);
-
+        //注册 事务
         registerTransaction(transaction);
         return transaction;
     }
 
-    public Transaction propagationExistBegin(TransactionContext transactionContext) throws NoExistedTransactionException {
-        Transaction transaction = transactionRepository.findByXid(transactionContext.getXid());
 
+    /**
+     * 传播获取分支事务
+     * 此方法在调用方法类型为 MethodType.PROVIDER 并且 事务处于 Confirm / Cancel 阶段被调用。
+     *
+     * @param transactionContext 事务上下文
+     * @return 分支事务
+     * @throws NoExistedTransactionException 当事务不存在时
+     */
+    public Transaction propagationExistBegin(TransactionContext transactionContext) throws NoExistedTransactionException {
+        // 查询 事务
+        Transaction transaction = transactionRepository.findByXid(transactionContext.getXid());
         if (transaction != null) {
+            // 设置 事务 状态
             transaction.changeStatus(TransactionStatus.valueOf(transactionContext.getStatus()));
+            // 注册 事务
             registerTransaction(transaction);
             return transaction;
         } else {
@@ -150,13 +181,15 @@ public class TransactionManager {
         return transactions != null && !transactions.isEmpty();
     }
 
-
+    /**
+     * 注册事务到当前线程事务队列
+     *
+     * @param transaction 事务
+     */
     private void registerTransaction(Transaction transaction) {
-
         if (CURRENT.get() == null) {
             CURRENT.set(new LinkedList<Transaction>());
         }
-
         CURRENT.get().push(transaction);
     }
 
