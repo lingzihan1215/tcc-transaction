@@ -80,7 +80,7 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
 
         TradeOrder tradeOrder = tradeOrderRepository.findByMerchantOrderNo(tradeOrderDto.getMerchantOrderNo());
 
-        //check if the trade order status is DRAFT, if yes, go on
+        //check if the trade order status is DRAFT, if yes, go on, if no, return directly, ensure idempotency.
         //更新订单状态为confirm
         if (tradeOrder != null && tradeOrder.getStatus().equals("DRAFT")) {
             tradeOrder.confirm();
@@ -105,7 +105,7 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
 
         TradeOrder tradeOrder = tradeOrderRepository.findByMerchantOrderNo(tradeOrderDto.getMerchantOrderNo());
 
-        //check if the trade order status is DRAFT, if yes, return directly, ensure idempotency.
+        //check if the trade order status is DRAFT, if yes, go on, if no, return directly, ensure idempotency.
         //更新订单状态为cancel
         if (null != tradeOrder && "DRAFT".equals(tradeOrder.getStatus())) {
             tradeOrder.cancel();

@@ -24,8 +24,14 @@ public class RedisTransactionRepository extends CachableTransactionRepository {
 
     private static final Logger logger = Logger.getLogger(RedisTransactionRepository.class.getSimpleName());
 
+    /**
+     * Jedis Pool
+     */
     private JedisPool jedisPool;
 
+    /**
+     * key 前缀
+     */
     private String keyPrefix = "TCC:";
 
     private int fetchKeySize = 1000;
@@ -38,6 +44,9 @@ public class RedisTransactionRepository extends CachableTransactionRepository {
         this.keyPrefix = keyPrefix;
     }
 
+    /**
+     * 序列化
+     */
     private ObjectSerializer serializer = new KryoPoolSerializer();
 
     public void setSerializer(ObjectSerializer serializer) {
@@ -77,15 +86,11 @@ public class RedisTransactionRepository extends CachableTransactionRepository {
 
     @Override
     protected int doCreate(final Transaction transaction) {
-
-
         try {
             Long statusCode = RedisHelper.execute(jedisPool, new JedisCallback<Long>() {
 
                 @Override
                 public Long doInJedis(Jedis jedis) {
-
-
                     List<byte[]> params = new ArrayList<byte[]>();
 
                     for (Map.Entry<byte[], byte[]> entry : ExpandTransactionSerializer.serialize(serializer, transaction).entrySet()) {
@@ -113,7 +118,7 @@ public class RedisTransactionRepository extends CachableTransactionRepository {
             Long statusCode = RedisHelper.execute(jedisPool, new JedisCallback<Long>() {
                 @Override
                 public Long doInJedis(Jedis jedis) {
-
+                    // 设置最后更新时间 和 最新版本号
                     transaction.updateTime();
                     transaction.updateVersion();
 

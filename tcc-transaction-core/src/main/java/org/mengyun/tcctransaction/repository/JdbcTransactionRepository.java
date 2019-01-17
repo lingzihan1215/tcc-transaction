@@ -3,7 +3,6 @@ package org.mengyun.tcctransaction.repository;
 
 import org.mengyun.tcctransaction.Transaction;
 import org.mengyun.tcctransaction.api.TransactionStatus;
-import org.mengyun.tcctransaction.serializer.JdkSerializationSerializer;
 import org.mengyun.tcctransaction.serializer.KryoPoolSerializer;
 import org.mengyun.tcctransaction.serializer.ObjectSerializer;
 import org.mengyun.tcctransaction.utils.CollectionUtils;
@@ -21,12 +20,26 @@ import java.util.List;
  */
 public class JdbcTransactionRepository extends CachableTransactionRepository {
 
+    /**
+     * 领域
+     * 或者也可以称为模块名，应用名，用于唯一标识一个资源。例如，Maven 模块 xxx-order，我们可以配置该属性为 ORDER
+     */
     private String domain;
-
+    /**
+     * 表后缀
+     * 默认存储表名为 TCC_TRANSACTION，配置表名后，为 TCC_TRANSACTION${tbSuffix}。
+     */
     private String tbSuffix;
-
+    /**
+     * 数据源
+     * 存储数据的数据源
+     */
     private DataSource dataSource;
-
+    /**
+     * 序列化
+     * 当数据库里已经有数据的情况下，不要更换别的序列化，否则会导致反序列化报错。
+     * 建议：TCC-Transaction 存储时，新增字段，记录序列化的方式。
+     */
     private ObjectSerializer serializer = new KryoPoolSerializer();
 
     public String getDomain() {
@@ -176,29 +189,36 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
         }
     }
 
+    /**
+     * 查询事务
+     *
+     * @param xid 事务编号
+     * @return 事务
+     */
     protected Transaction doFindOne(Xid xid) {
-
         List<Transaction> transactions = doFind(Arrays.asList(xid));
-
         if (!CollectionUtils.isEmpty(transactions)) {
             return transactions.get(0);
         }
         return null;
     }
 
+    /**
+     * 获取超过指定时间的事务集合
+     *
+     * @param date 指定时间
+     * @return 事务集合
+     */
     @Override
     protected List<Transaction> doFindAllUnmodifiedSince(java.util.Date date) {
-
         List<Transaction> transactions = new ArrayList<Transaction>();
 
         Connection connection = null;
         PreparedStatement stmt = null;
-
         try {
             connection = this.getConnection();
 
             StringBuilder builder = new StringBuilder();
-
             builder.append("SELECT GLOBAL_TX_ID, BRANCH_QUALIFIER, CONTENT,STATUS,TRANSACTION_TYPE,CREATE_TIME,LAST_UPDATE_TIME,RETRIED_COUNT,VERSION");
             builder.append(StringUtils.isNotEmpty(domain) ? ",DOMAIN" : "");
             builder.append("  FROM " + getTableName() + " WHERE LAST_UPDATE_TIME < ?");
@@ -206,7 +226,6 @@ public class JdbcTransactionRepository extends CachableTransactionRepository {
             builder.append(StringUtils.isNotEmpty(domain) ? " AND DOMAIN = ?" : "");
 
             stmt = connection.prepareStatement(builder.toString());
-
             stmt.setTimestamp(1, new Timestamp(date.getTime()));
 
             if (StringUtils.isNotEmpty(domain)) {
